@@ -1,5 +1,7 @@
 # KSU Motorsports Dashboard & Data Logger
 
+![KS-2 Dashboard](/Dash.JPG "KS-2 Dashboard")
+
 This is a custom dashboard / shift-light module created for the Kennesaw State University Motorsports student-built race car, the KS-2.
 In a 5" x 1.25" x 0.5" footprint, it has:
 
@@ -19,5 +21,21 @@ I've included a PDF to view the schematic without EagleCAD, and the models (STL/
 All portions of the hardware work individually, but the final human-readable firmware is still in flux, pending a working racecar :)
 
 Feel free to contact me with any questions (and job offers are always welcome),
+
 Clinton Flowers
+
 clintonflowers222@gmail.com
+
+   Copyright 2017 Clinton Flowers
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
