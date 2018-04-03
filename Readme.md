@@ -17,7 +17,7 @@ In a 5" x 1.25" x 0.5" footprint, it has:
 
 It's based on a combination of a Atmega328P (Arduino Uno) and a Atmega2560 (Arduino Mega) to ensure team members can program it into the future.
 
-I've included a PDF to view the schematic without EagleCAD, and the models (STL/SLDPRT) of the enclosure pieces. The version 1 faceplate and backplate were designed for Formlabs clear resin, as the backplate's integrated cable-tie strain-relief loops would may break more easily on FDM prints. Newer designs (version 2+) use a thin waterjet polycarbonate faceplate for simplicity.
+I've included a PDF to view the schematic without EagleCAD, and the models (STL/SLDPRT) of the enclosure pieces. The version 1 faceplate and backplate were designed for Formlabs clear resin, as the backplate's integrated cable-tie strain-relief loops may break more easily on FDM prints (due to Z-axis layer adhesion). Newer designs (version 2+) use a thin waterjet polycarbonate faceplate for simplicity.
 
 Feel free to contact me with any questions,
 
