@@ -5,14 +5,16 @@
   Clinton Flowers, 2017
   For programming via ISP, see https://learn.sparkfun.com/tutorials/installing-an-arduino-bootloader/connecting-the-programmer
   Don't forget the capacitor on the reset pin of the programmer Arduino, and don't forget to use "Upload using Programmer"
+  
   If you're using this for a student project (e.g., a Formula SAE car) and need help with it feel free to contact me @ clintonflowers222@gmail.com
+  
+  Remember, a design goal of this dash was to display only critical information the driver needs to know; K.I.S.S. applies. If this changes, consider Waveshare panels.
   
   MSCan_Sniffer was used and is Copyright (c) 2013 David Will - davidwill@gmail.com The MIT License (MIT)
  */
 
 // Note - CAN data is transmitted in the blind.
 // Communications with Megasquirt can only be verified by *RECEIVED* data.
-// To enable a megasquirt-compatible RPM read, uncomment below
 #define MS_REQUEST
 
 #include <SPI.h>
@@ -148,6 +150,7 @@ long lastShow = 0;
 
 // Fields stored as received over CAN bus. Append new variables of interest here.
 // After declaring the variable storage here, add code to request the associated address in the loop, and handle it in the ISR
+// One better way to do this would be object-oriented, where the CAN fields are instantiated with name, address, etc, and add themselves to an array of CAN field objects
 unsigned int canRPM = 0;
 unsigned const int shiftRPM = 12000;
 String canVoltage = "0";
@@ -165,8 +168,8 @@ Adafruit_BNO055 bno = Adafruit_BNO055();
 imu::Vector<3> accel;
 int latAccel = 0;
 // I2C Addresses
-int unoAddress = 5;
-int megaAddress = 6;
+const int unoAddress = 5;
+const int megaAddress = 6;
 
 void setup() {
   // Enable Watchdog Timer
@@ -244,6 +247,7 @@ void setup() {
   delay(1);
 
   // SD Card / Datalogging Stuff
+  // See the IR Tire Temp Sensor code on how to create files and handle appending/creating CSVs. Ensure the clocks are synced (DS3231 drifts ~5 seconds/month)
 //  if (!SD.begin(A8)) { // The SD card CS line is on pin PC0/Arduino 37/A8 on Dash v0.2
 //    showText("NSD");  // No SD card. User or hardware problem.
 //    delay(200);
@@ -252,7 +256,7 @@ void setup() {
 //    delay(200);
 //  }
  
-  showText("Hooty Hoo 1.8"); // Firmware version number.
+  showText("Hooty Hoo 1.9"); // Firmware version number.
   delay(100);
 
   // CAN Interrupt setup and CAN stuff
@@ -357,10 +361,10 @@ void rightFunc(){
 // In the later versions, this is not used, since the 2560 sends the 328P the RPM on its own time. Could delete.
 void requestEvent(){
   if(canRPM == 0){ // The RPM is reading zero. Display TPS!
-    Wire.write(map(canTPS, 0, 1100, 0, 255)); 
+    Wire.write(map(canTPS, 0, 1050, 0, 255));
   }else{
     // Return the RPM value
-    Wire.write(map(canRPM, 0, 12000, 0, 255));
+    Wire.write(map(canRPM, 0, shiftRPM, 0, 255));
   }
 } // End requestEvent()
 
@@ -376,11 +380,7 @@ void sendRpm(){
       // Might as well display the lateral acceleration or something so we know the dash isn't broken when debugging on a bench.
       ledArgs[1] = abs(latAccel);
       if(latAccel > 8){
-        showText("PLS");
-        delay(200);
-        showText("NO");
-        delay(200);
-        showText("HIT");
+        showText("ACC"); // Accelerometer/Acceleration
         delay(200);
       }
     }
@@ -390,12 +390,12 @@ void sendRpm(){
     ledArgs[4] = 50;    // Green
     ledArgs[5] = 0;     // Blue
     ledArgs[1] = map(canRPM, 0, shiftRPM, 0, 10);
-    if(canRPM > shiftRPM){ // We're over 'n'k RPM, display hard red
+    if(canRPM > shiftRPM){ // We're over 'n'k RPM, display bright blue/green. Don't use bright red since that should only indicate errors.
       ledArgs[3] = 64;
       ledArgs[4] = 128;
       ledArgs[5] = 255;
-    }else if(canRPM > 15000){
-      resetFunction(); // something's broke or breaking yo
+    }else if(canRPM > (shiftRPM * 2)){
+      resetFunction(); // Something's broke, or breaking
     }
   }
   // Send the LED values to the 328P for display
