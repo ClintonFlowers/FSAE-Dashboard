@@ -17,12 +17,13 @@
 // Communications with Megasquirt can only be verified by *RECEIVED* data.
 #define MS_REQUEST
 
+#include "2560Lib.h"
+#include <CAN.h>
 #include "Tasker.h"
 #include <SPI.h>
 #include <Wire.h>
 #include "RTClib.h" // Adafruit RTCLib Library, from Library Manager
 #include <SD.h>
-#include <CAN.h>
 // IMU Includes
 #include <Adafruit_Sensor.h> // Adafruit Unified Sensor library, from Library Manager
 #include <Adafruit_BNO055.h> // Adafruit BNO055 library, from Library Manager
@@ -51,27 +52,8 @@
 
 Tasker tasker;
 
-// These arrays are used to map the alphanumeric LED's to the associated code character. 
-// Each bit position corresponds to a segment of the LED; adding the correct bits together and then shifting that byte into the driver will light up the segments for that character
-// Since there are 15 positions per digit, we use 2 8-bit bytes, so a Top and a Bottom
-const char characterList[] =    {' ',  '$',  '0',  '1',  '2',  '3',  '4',  '5',  '6',  '7',  '8',  '9',  'A',  'B',  'C',  'D',  'E',  'F',  'G',  'H',  'I',  'J',  'K',  'L',  'M',  'N',  'O',  'P',  'Q',  'R',  'S',  'T',  'U',  'V',  'W',  'X',  'Y',  'Z'};
-const byte characterBottoms[] = {0x00, 0x65, 0xe2, 0x20, 0xc1, 0x61, 0x21, 0x61, 0xe1, 0x20, 0xe1, 0x21, 0xa1, 0x65, 0xc0, 0x64, 0xc1, 0x81, 0xe0, 0xa1, 0x44, 0xe0, 0x89, 0xc0, 0xa0, 0xa8, 0xe0, 0x81, 0xe8, 0x89, 0x60, 0x04, 0xe0, 0x82, 0xaa, 0x0a, 0x05, 0x42};
-const byte characterTops[] =    {0x00, 0x6a, 0x56, 0x14, 0x0e, 0x0e, 0x4c, 0x4a, 0x4a, 0x06, 0x4e, 0x4e, 0x4e, 0x2e, 0x42, 0x26, 0x42, 0x42, 0x4a, 0x4c, 0x22, 0x04, 0x50, 0x40, 0x55, 0x45, 0x46, 0x4e, 0x46, 0x4e, 0x0b, 0x22, 0x44, 0x50, 0x44, 0x11, 0x4c, 0x12};
-// Various control variables for the TLC59281RGER Constant Current LED Driver
-const int blankPin = 65;
-const int latchPin = 64;
-const int clockPin = 63;
-const int dataPin = 62;
-// Pins for the joystick on the rear of the device, accounting for improper hardware placement. Unused in current code.
-const int centerPin = PE6;  // Center in schematic, J_Common as installed. 
-const int rightPin = 19;    // J_Left in schematic
-const int leftPin = PE7;    // J_Right in schematic
-const int downPin = 2;      // J_Up in schematic
-const int upPin = 3;        // J_Down in schematic
-// How many (14-segment + dp) alphanumeric displays are connected
-const int numberOfAlphanumerics = 3;
-// Vars for data passed to shifting function
-byte dataOne, dataTwo, dataThree, dataFour, dataFive, dataSix;
+
+
 
 // Some more global vars
 // Received CAN data
@@ -100,20 +82,18 @@ int latAccel = 0;
 const int unoAddress = 5;
 const int megaAddress = 6;
 
-#include "2560Lib.h"
-
 void setup() {
   // Enable Watchdog Timer
-  wdt_enable(WDTO_2S); // 8 seconds to allow for programming on ...most... bootloaders. :contingency:
+  wdt_enable(WDTO_8S); // 8 seconds to allow for programming on ...most... bootloaders. :contingency:
   // TODO: For when the dash reboots mid-race due to any reason, maybe make this ask the other MCU its millis() over I2C to see if it should say "hooty hoo" etc, or jump right into displaying RPM
 
   tasker.init();
 
-  pinMode(CS_PIN, OUTPUT);
-  SPI.setClockDivider(SPI_CLOCK_DIV2);
-  SPI.setDataMode(SPI_MODE0);
-  SPI.setBitOrder(MSBFIRST);
-  SPI.begin();
+//  pinMode(CS_PIN, OUTPUT);
+//  SPI.setClockDivider(SPI_CLOCK_DIV2);
+//  SPI.setDataMode(SPI_MODE0);
+//  SPI.setBitOrder(MSBFIRST);
+//  SPI.begin();
   delay(1);
 
   delay(1);
@@ -166,16 +146,17 @@ void setup() {
 //  }
  
   //showText("Hooty Hoo 1.9"); // Firmware version number.
-  delay(100);
+//  delay(100);
 
   // CAN Interrupt setup and CAN stuff
-//  pinMode(CAN_INT_PIN, INPUT_PULLUP); // Maybe not necessary, but shouldn't hurt
-//  attachInterrupt(digitalPinToInterrupt(CAN_INT_PIN), ISR_can, FALLING);
-  //if (!CAN.begin(500E3)) {
-  //  showText("NCN"); // The CAN doesn't work. Hardware problem!
-  //  delay(100);
-  //}
-  //CAN.onReceive(ISR_can);
+  pinMode(CAN_INT_PIN, INPUT_PULLUP); // Maybe not necessary, but shouldn't hurt  
+  if (!CAN.begin(500E3)) {
+    showText("NCN"); // The CAN doesn't work. Hardware problem!
+    delay(200);
+  }
+  //attachInterrupt(digitalPinToInterrupt(CAN_INT_PIN), ISR_can, FALLING);
+//  CAN.onReceive(ISR_can);
+//  CAN.onReceive(rxd);
 //  for(int i = 0; i < 3; i++){
 //    MS_Parse();
 //    delay(1);
@@ -184,15 +165,27 @@ void setup() {
   
 } // End setup()
 
+void rxd(int packetSize){
+  noInterrupts();
+  showText("RXD");
+  interrupts();
+}
+
 void loop() {
   // Clear watchdog, delaying forced resets. Sometimes called "kicking" the watchdog
+//  showText("z01");
   wdt_reset();
+//  showText("z02");
   tasker.taskLoop();
+//  showText("z03");
   updateNeopixels(); // Update LEDs of the 328P via I2C
+//  showText("z04");
   delay(1);
   accel = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
+//  showText("z05");
   delay(1); // Allow time for fetching data from the IMU
   latAccel = accel.y();
+//  showText("z06");
   if(latAccel > 10){ // Display lateral G's if turning hard enough (over 5 m/s^2)
     float latGs = accel.y() / 9.81;
     showText(String(latGs));
@@ -200,37 +193,45 @@ void loop() {
     // If the modulo of the time the dash has been on is < 2.5s, show voltage, otherwise show coolant temp.
     // (That's the programming way of saying alternate showing Batt and CLT every 2.5s)
     showText(String(canText));
+//    showText("z07");
   }
   
-  if (dataready == 1) {
+//  if (dataready == 1) {
     //MS_Parse(); // Deal with data if it's arrived (shouldn't be necessary since ISR_CAN is working)
     //dataready = 0;
-  }
+//  } 
 } // End loop()
 
 // I2C Send RPM - When called, transmits the current RPM to the I2C Slaved 328P
 void updateNeopixels(){
   // ledArgs format: setPixelGroup(int beginPixels, int endPixels, int delayTime, int red, int green, int blue, int mode). See 328p code for most up-to-date format.
   int ledArgs[7] = {1, 1, 0, canRed, canGreen, canBlue, 0};
+//  showText("a01");
   Wire.beginTransmission(unoAddress);
   if(canText == ""){ // The dash has not received a message from the VCU
+//    showText("a02");
     ledArgs[1] = (millis() / 1000) % 10;
     if(abs(latAccel) > 5.0){
       // Might as well display the lateral acceleration or something so we know the dash isn't broken when debugging on a bench.
       ledArgs[1] = abs(latAccel);
     }
+//    showText("a03");
   }else{
     // Display the RPM value
     ledArgs[3] = canRed;   // Red
     ledArgs[4] = canGreen;    // Green
     ledArgs[5] = canBlue;     // Blue
     ledArgs[1] = canDisplayedSegments;
+//    showText("a04");
   }
+//  showText("a05");
   // Send the LED values to the 328P for display
   for(int i = 0; i < 7; i++){
     Wire.write(ledArgs[i]);
   }
+//  showText("a06");
   Wire.endTransmission();
+//  showText("a07");
 } // End updateNeopixels()
 
 
@@ -238,56 +239,40 @@ void updateNeopixels(){
 // Any time the MCP2515 pings the interrupt pin of the 2560, indicating a message is ready in the CAN buffer, this is run
 // Handle new CAN messages
 void ISR_can(int packetSize) {
-
-  Serial.print("Received ");
     
   if (CAN.packetExtended()) {
-    showText("EX");
-//    Serial.print("extended ");
+    showText(" X ");
   }
 
   if (CAN.packetRtr()) {
-    showText("RRR");
+    showText("R  ");
     // Remote transmission request, packet contains no data
-//    Serial.print("RTR ");
   }
-
-//  Serial.print("packet with id 0x");
-//  Serial.print(CAN.packetId(), HEX);
 
   int currentByte = 0;
   byte bytes [packetSize];
 
   if (CAN.packetRtr()) {
-    showText("RTR");
-//    Serial.print(" and requested length ");
-//    Serial.println(CAN.packetDlc());
+    showText("  R");
   } else {
-//    Serial.print(" and length ");
-//    Serial.println(packetSize);
 
     // only print packet data for non-RTR packets
     while (CAN.available()) {
       bytes[currentByte] = ((byte)CAN.read());
       currentByte++;
-//      Serial.print(bytes[currentByte]);
-//      Serial.print(" ");
     }
-//    Serial.println();
   }
 
    if(bytes[0] == (byte)0x01){
-//      Serial.println("RPM Received: " + String(0 + bytes[1] + (bytes[2] >> 8)));
       showText("SD.");
       char ch[]={bytes[1],bytes[2],bytes[3]};
       String toDisplay(ch);
       canText = toDisplay;
       showText(toDisplay);
    }else{
-    showText("NO.");
+    showText("  .");
    }
 
-//  Serial.println();
 //  MS_Parse();
 } // END ISR_can()
 

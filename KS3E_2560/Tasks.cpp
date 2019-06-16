@@ -1,13 +1,39 @@
 #include "Tasker.h"
 
-class PrintWew : public TaskClass {
+class HandleCan : public TaskClass {
 public:
     void execute() override {
-//        Serial.println("wew");
+      int packetSize = CAN.parsePacket();
+
+      if (packetSize) {
+        // received a packet
+        showText("rxd");
+    
+        if (CAN.packetExtended()) {
+          
+        }
+    
+        if (CAN.packetRtr()) {
+          // Remote transmission request, packet contains no data
+          
+        }
+    
+    
+        if (CAN.packetRtr()) {
+          
+        } else {
+          
+    
+          // only print packet data for non-RTR packets
+          while (CAN.available()) {
+//            Serial.print((char)CAN.read());
+          }
+        }
+      }
     }
 
 private:
-    volatile unsigned int getExecutionDelay() override { return 5000000; }
+    volatile unsigned int getExecutionDelay() override { return 1000000; }
 };
 
 class PrintLad : public TaskClass {

@@ -11,6 +11,9 @@
 #define TASKS_ARRAY_SIZE 2 // This must match the number of tasks that are defined in the init method. Ideally, a linked list would obviate the need for this, but that is added complexity. 
 #define ADC_READ_RESOLUTION 10   // For Teensy. Default is 10. Above 12, read time increases drastically.
 
+#include <CAN.h>
+#include "2560Lib.h"
+
 
 class TaskClass {
 protected:

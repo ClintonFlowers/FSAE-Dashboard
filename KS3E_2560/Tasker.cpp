@@ -9,7 +9,7 @@ void Tasker::init() {
     }
 
     // Declare tasks which should be executed
-    tasks[0] = new PrintWew();
+    tasks[0] = new HandleCan();
     tasks[1] = new PrintLad();
 
     // Default variable initialization
